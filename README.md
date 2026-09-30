@@ -6,15 +6,21 @@ persyaratan print server, analisis pesan error, dan troubleshooting hardware/sof
 
 ## Menjalankan
 
-Tidak ada build step dan tidak perlu server. Cukup buka `aplikasi_kuis_jaringan_print_server.html`
-di browser (Chrome/Edge/Firefox).
+Tidak ada build step dan tidak perlu server. Buka `index.html` di browser
+(Chrome/Edge/Firefox).
 
-- **Lokal** — klik ganda file HTML-nya.
+- **Lokal** — klik ganda `index.html`.
 - **Lewat server lokal** (disarankan agar `requestFullscreen` tidak diblokir kebijakan `file://`):
 
   ```bash
   npx serve .
   ```
+
+## Versi live
+
+Halaman ini juga disajikan via GitHub Pages:
+
+https://hendrazulpiadi.github.io/kuis-jaringan-print-server/
 
 ## Fitur
 
@@ -45,7 +51,8 @@ terlihat, sehingga satu kali pindah tab = satu pelanggaran.
 ## Struktur
 
 ```
-aplikasi_kuis_jaringan_print_server.html   # seluruh aplikasi (HTML + CSS + JS)
+index.html     # seluruh aplikasi (HTML + CSS + JS)
+.nojekyll      # menonaktifkan Jekyll di GitHub Pages agar file tersaji apa adanya
 ```
 
 - **CSS** — Tailwind CSS via CDN, dark theme.
