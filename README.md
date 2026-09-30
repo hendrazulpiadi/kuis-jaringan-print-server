@@ -24,6 +24,10 @@ di browser (Chrome/Edge/Firefox).
 - Layar identitas (nama + kelas) sebelum kuis.
 - Ringkasan hasil + tombol cetak (`window.print()`) untuk simpan bukti.
 - Auto-lock layar (fullscreen) saat kuis dimulai.
+- **Penyimpanan hasil otomatis** ke `localStorage` + tombol *Unduh Hasil (JSON)*
+  berisi jawaban, kunci, skor, durasi, pelanggaran, dan alasan berakhirnya kuis.
+- **Batas percobaan** (default 3×) per browser. Percobaan dicatat **saat kuis dimulai**,
+  jadi menutup halaman di tengah kuis tidak memberi percobaan tambahan.
 
 ## Sistem Anti-Cheat
 
@@ -69,9 +73,17 @@ Label "Pertanyaan N dari M" di header ikut menyesuaikan otomatis dari `quizData.
 ## Catatan
 
 - Skor = `benar / jumlah soal * 100`. KKM 75.
-- Hasil **belum disimpan** ke mana pun (tidak ada `localStorage` atau API). Tombol
-  "Simpan Hasil" hanya mencetak halaman.
-- Tombol "Ulangi Kuis" memuat ulang halaman tanpa batas percobaan.
+- Tombol *Unduh Hasil (JSON)* mengekspor seluruh rekaman percobaan (dalam satu
+  berkas JSON) untuk dikirim ke guru.
+- **Penyimpanan lokal bukan keamanan.** Siswa tetap bisa menghapus data browser.
+  Untuk integritas penilaian sejati dibutuhkan backend (server + basis data).
+- **`file://` berbahaya bagi pemakaian bersama** — semua berkas lokal berbagi satu
+  origin `localStorage`, jadi percobaan & hasil antar siswa di satu PC bisa tertukar.
+  Jalankan via `npx serve .` saat ujian berlangsung. Peringatan ini juga tampil
+  otomatis di halaman saat dibuka lewat `file://`.
+- **Reset data (guru):** buka DevTools → tab Console, jalankan `resetQuizData()`.
+  Fungsi ini menghapus kunci `tkj_printserver_hasil_v1` dan
+  `tkj_printserver_percobaan_v1` di localStorage.
 
 ## Lisensi
 

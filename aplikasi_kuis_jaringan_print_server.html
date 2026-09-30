@@ -65,7 +65,10 @@
                     <div class="flex items-start"><i class="fa-solid fa-check text-cyan-400 mt-0.5 mr-2"></i> Jangan membuka tab lain, aplikasi lain, atau meminimize browser.</div>
                     <div class="flex items-start"><i class="fa-solid fa-check text-cyan-400 mt-0.5 mr-2"></i> Maksimal 3 kali peringatan sebelum kuis otomatis disubmit paksa.</div>
                     <div class="flex items-start"><i class="fa-solid fa-check text-cyan-400 mt-0.5 mr-2"></i> Siapkan catatan konsep subnetting & troubleshooting Anda.</div>
+                    <div class="flex items-start"><i class="fa-solid fa-check text-cyan-400 mt-0.5 mr-2"></i> Maksimal <span id="max-attempt-label">3</span> kali percobaan. Setiap percobaan dicatat otomatis di browser ini.</div>
                 </div>
+
+                <div id="attempt-banner" class="mb-4 text-left"></div>
 
                 <form id="identity-form" onsubmit="startQuiz(event)" class="space-y-4 text-left">
                     <div>
@@ -131,7 +134,7 @@
                     <i id="result-icon" class="fa-solid fa-award"></i>
                 </div>
                 <h2 class="text-2xl font-bold text-white mb-1">Kuis Telah Selesai!</h2>
-                <p id="result-subtitle" class="text-slate-400 text-sm mb-6">Data jawaban Anda telah terekam di sistem.</p>
+                <p id="result-subtitle" class="text-slate-400 text-sm mb-6">Data jawaban Anda tersimpan di browser ini.</p>
 
                 <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-6 mb-6 text-left space-y-3 shadow-inner">
                     <div class="flex justify-between text-sm">
@@ -146,11 +149,25 @@
                         <span class="text-slate-400">Pelanggaran Layar:</span>
                         <span id="summary-violations" class="font-semibold text-amber-400"></span>
                     </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-400">Percobaan ke-:</span>
+                        <span id="summary-attempt" class="font-semibold text-white"></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-400">Waktu pengerjaan:</span>
+                        <span id="summary-duration" class="font-semibold text-white"></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-400">Akhir kuis:</span>
+                        <span id="summary-reason" class="font-semibold text-white"></span>
+                    </div>
                     <div class="border-t border-slate-800 pt-3 flex justify-between items-center">
                         <span class="text-slate-300 font-medium">Skor Akhir:</span>
                         <span id="summary-score" class="text-2xl font-black text-cyan-400">0 / 100</span>
                     </div>
                 </div>
+
+                <p id="save-notice" class="hidden text-xs text-slate-400 mb-4 leading-relaxed"></p>
 
                 <div class="space-y-3">
                     <button onclick="triggerScreenshot()" 
@@ -158,7 +175,12 @@
                         <i class="fa-solid fa-camera"></i>
                         <span>Simpan Hasil / Tangkap Layar</span>
                     </button>
-                    <button onclick="location.reload()" 
+                    <button id="export-btn" onclick="exportResults()"
+                        class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-3 px-6 rounded-xl transition shadow-md shadow-cyan-600/20 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-file-arrow-down"></i>
+                        <span>Unduh Hasil (JSON)</span>
+                    </button>
+                    <button id="retry-btn" onclick="retryQuiz()" 
                         class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-xl transition text-sm">
                         Ulangi Kuis
                     </button>
@@ -287,6 +309,198 @@
                 .replace(/\*([^*]+)\*/g, '<em class="italic text-slate-300">$1</em>');
         }
 
+        // === Penyimpanan Hasil & Batas Percobaan ===
+        // Semua data disimpan di localStorage browser, tanpa server.
+        // Ini murni pengaman, bukan keamanan: siswa tetap bisa menghapus
+        // data browser. Untuk integritas penuh diperlukan backend.
+        const STORAGE_KEY = 'tkj_printserver_hasil_v1';
+        const ATTEMPT_KEY = 'tkj_printserver_percobaan_v1';
+        const MAX_ATTEMPTS = 3;
+
+        function storageAvailable() {
+            try {
+                const probe = '__probe__';
+                localStorage.setItem(probe, '1');
+                localStorage.removeItem(probe);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function readJson(key, fallback) {
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        function writeJson(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function getAttempts() {
+            const n = Number(readJson(ATTEMPT_KEY, 0));
+            return Number.isFinite(n) && n >= 0 ? n : 0;
+        }
+
+        function attemptsLeft() {
+            return Math.max(0, MAX_ATTEMPTS - getAttempts());
+        }
+
+        function recordAttempt() {
+            const next = getAttempts() + 1;
+            return writeJson(ATTEMPT_KEY, next) ? next : null;
+        }
+
+        function getResults() {
+            const list = readJson(STORAGE_KEY, []);
+            return Array.isArray(list) ? list : [];
+        }
+
+        function saveResult(record) {
+            const list = getResults();
+            list.push(record);
+            return writeJson(STORAGE_KEY, list);
+        }
+
+        // Dipakai guru untuk mereset data dari console browser
+        function resetQuizData() {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(ATTEMPT_KEY);
+        }
+
+        function formatDuration(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m} menit ${s.toString().padStart(2, '0')} detik`;
+        }
+
+        const REASON_LABEL = {
+            'manual': 'Diserahkan siswa',
+            'waktu-habis': 'Waktu habis (auto-submit)',
+            'pelanggaran-3x': 'Pelanggaran 3x (auto-submit)'
+        };
+
+        function exportResults() {
+            const results = getResults();
+            if (!results.length) {
+                alert('Belum ada hasil kuis yang tersimpan.');
+                return;
+            }
+            const payload = {
+                aplikasi: 'Kuis Konfigurasi Print Server & Jaringan Dasar',
+                dieksporPada: new Date().toISOString(),
+                totalPercobaan: results.length,
+                batasPercobaan: MAX_ATTEMPTS,
+                hasil: results
+            };
+            try {
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `hasil-kuis-print-server-${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            } catch (e) {
+                alert('Gagal membuat berkas JSON: ' + e.message);
+            }
+        }
+
+        function renderSaveNotice(saved) {
+            const notice = document.getElementById('save-notice');
+            const total = getResults().length;
+            notice.classList.remove('hidden');
+            if (!storageAvailable()) {
+                notice.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1.5"></i> Browser ini memblokir penyimpanan lokal, jadi hasil <b>tidak</b> bisa tersimpan. Gunakan tombol cetak sebagai gantinya.';
+            } else if (!saved) {
+                notice.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1.5"></i> Penyimpanan lokal penuh atau ditolak browser, hasil ini gagal disimpan.';
+            } else {
+                notice.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 mr-1.5"></i> Hasil tersimpan di browser ini. Gunakan <b>Unduh Hasil (JSON)</b> untuk mengirimkannya ke guru. Total ${total} percobaan tercatat.`;
+            }
+        }
+
+        function renderRetryButton() {
+            const btn = document.getElementById('retry-btn');
+            const left = attemptsLeft();
+            if (left > 0) {
+                btn.disabled = false;
+                btn.className = 'w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-xl transition text-sm';
+                btn.textContent = `Ulangi Kuis (${left} percobaan tersisa)`;
+            } else {
+                btn.disabled = true;
+                btn.className = 'w-full bg-slate-800 text-slate-500 font-medium py-2.5 px-6 rounded-xl cursor-not-allowed text-sm';
+                btn.textContent = 'Batas percobaan habis';
+            }
+        }
+
+        function retryQuiz() {
+            if (attemptsLeft() <= 0) {
+                renderRetryButton();
+                return;
+            }
+            location.reload();
+        }
+
+        function renderAttemptBanner() {
+            const banner = document.getElementById('attempt-banner');
+            const form = document.getElementById('identity-form');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const used = getAttempts();
+            const left = attemptsLeft();
+
+            document.getElementById('max-attempt-label').textContent = MAX_ATTEMPTS;
+
+            // file:// membuat semua halaman lokal berbagi satu origin localStorage,
+            // sehingga percobaan/hasil antar siswa bisa tertukar di PC bersama.
+            const isFileMode = typeof location !== 'undefined' && location.protocol === 'file:';
+            const fileWarn = isFileMode
+                ? `<div class="bg-slate-900/60 border border-slate-700 text-slate-400 text-xs rounded-xl px-4 py-3 leading-relaxed mb-2">
+                       <i class="fa-solid fa-circle-info text-cyan-400 mr-1.5"></i> Dibuka lewat <b>file://</b>. Semua berkas lokal berbagi penyimpanan, jadi bila PC ini dipakai beberapa siswa, percobaan & hasil bisa tertukar. Disarankan jalankan via <code class="font-mono text-cyan-300">npx serve .</code>.</div>`
+                : '';
+
+            if (used === 0) {
+                banner.innerHTML = fileWarn;
+                banner.classList.toggle('hidden', !fileWarn);
+                form.classList.remove('hidden', 'opacity-40', 'pointer-events-none');
+                if (submitBtn) submitBtn.disabled = false;
+                return;
+            }
+
+            banner.classList.remove('hidden');
+            if (left === 0) {
+                banner.innerHTML = fileWarn + `<div class="bg-red-500/10 border border-red-500/30 text-red-300 text-xs rounded-xl px-4 py-3 leading-relaxed">
+                    <i class="fa-solid fa-ban mr-1.5"></i> <b>Batas ${MAX_ATTEMPTS} percobaan sudah habis.</b> Hubungi guru bila ini keliru.</div>`;
+                form.classList.add('opacity-40', 'pointer-events-none');
+                if (submitBtn) submitBtn.disabled = true;
+            } else {
+                banner.innerHTML = fileWarn + `<div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs rounded-xl px-4 py-3 leading-relaxed">
+                    <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Percobaan <b>${used} dari ${MAX_ATTEMPTS}</b> telah dipakai. Sisa <b>${left}</b> percobaan.</div>`;
+                form.classList.remove('opacity-40', 'pointer-events-none');
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        }
+
+        function initApp() {
+            renderAttemptBanner();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
         // State Aplikasi
         let currentQuestionIndex = 0;
         let userAnswers = new Array(quizData.length).fill(null);
@@ -300,6 +514,8 @@
         let timeLeft = 900; // 15 menit
         let quizDeadline = null;
         let lastViolationAt = 0;
+        let attemptNumber = 0;
+        let quizStartedAt = null;
 
         // Inisialisasi Mulai Kuis
         function startQuiz(e) {
@@ -309,8 +525,17 @@
 
             if (!nameInput || !classInput) return;
 
+            // Percobaan dihitung saat kuis dimulai, bukan saat submit,
+            // agar siswa yang menutup halaman di tengah tidak bisa mengulang.
+            if (attemptsLeft() <= 0) {
+                renderAttemptBanner();
+                return;
+            }
+            attemptNumber = recordAttempt();
+
             studentInfo.name = nameInput;
             studentInfo.classRoom = classInput;
+            quizStartedAt = Date.now();
 
             // Masuk Fullscreen jika didukung browser
             try {
@@ -344,7 +569,7 @@
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     renderTimer();
-                    finishQuiz();
+                    finishQuiz('waktu-habis');
                     return;
                 }
                 renderTimer();
@@ -421,7 +646,7 @@
                 currentQuestionIndex++;
                 loadQuestion();
             } else {
-                finishQuiz();
+                finishQuiz('manual');
             }
         }
 
@@ -433,12 +658,13 @@
             }
         }
 
-        // Selesaikan Kuis & Hitung Skor
-        function finishQuiz() {
+        // Selesaikan Kuis, Hitung Skor, Simpan Hasil
+        function finishQuiz(reason) {
             if (quizFinished) return;
             quizFinished = true;
             quizActive = false;
             clearInterval(timerInterval);
+            const finishReason = REASON_LABEL[reason] ? reason : 'manual';
 
             // Tutup modal peringatan agar tidak menutupi layar hasil
             document.getElementById('warning-modal').classList.add('hidden');
@@ -449,6 +675,29 @@
                 if (ans === quizData[idx].correct) correctCount++;
             });
             const score = Math.round((correctCount / quizData.length) * 100);
+            const durationSec = quizStartedAt
+                ? Math.max(0, Math.round((Date.now() - quizStartedAt) / 1000))
+                : 0;
+
+            // Simpan hasil ke localStorage
+            const record = {
+                id: `${Date.now()}-${attemptNumber}`,
+                nama: studentInfo.name,
+                kelas: studentInfo.classRoom,
+                skor: score,
+                jawabanBenar: correctCount,
+                totalSoal: quizData.length,
+                pelanggaran: violationCount,
+                percobaanKe: attemptNumber,
+                batasPercobaan: MAX_ATTEMPTS,
+                durasiDetik: durationSec,
+                akhirKuis: finishReason,
+                waktuMulai: quizStartedAt ? new Date(quizStartedAt).toISOString() : null,
+                waktuSubmit: new Date().toISOString(),
+                jawaban: userAnswers.slice(),
+                kunci: quizData.map(q => q.correct)
+            };
+            const saved = storageAvailable() ? saveResult(record) : false;
 
             // Tampilkan Ringkasan
             document.getElementById('quiz-screen').classList.add('hidden');
@@ -458,7 +707,13 @@
             document.getElementById('summary-name').textContent = studentInfo.name;
             document.getElementById('summary-class').textContent = studentInfo.classRoom;
             document.getElementById('summary-violations').textContent = `${violationCount} Kali`;
+            document.getElementById('summary-attempt').textContent = `${attemptNumber} dari ${MAX_ATTEMPTS}`;
+            document.getElementById('summary-duration').textContent = formatDuration(durationSec);
+            document.getElementById('summary-reason').textContent = REASON_LABEL[finishReason];
             document.getElementById('summary-score').textContent = `${score} / 100`;
+
+            renderSaveNotice(saved);
+            renderRetryButton();
 
             if (score >= 75) {
                 document.getElementById('result-icon-container').className = "w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-3xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-xl";
@@ -501,7 +756,7 @@
 
             if (violationCount >= maxViolations) {
                 alert("Anda telah melanggar aturan pengaman layar sebanyak 3 kali. Kuis akan disubmit otomatis sekarang!");
-                finishQuiz();
+                finishQuiz('pelanggaran-3x');
             } else {
                 const modal = document.getElementById('warning-modal');
                 const msg = document.getElementById('warning-message');
