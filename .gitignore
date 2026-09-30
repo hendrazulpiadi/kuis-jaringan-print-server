@@ -1,0 +1,17 @@
+# Editor & OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node (untuk tooling pengembangan)
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Berkas sementara
+*.tmp
+*.log
+~$*

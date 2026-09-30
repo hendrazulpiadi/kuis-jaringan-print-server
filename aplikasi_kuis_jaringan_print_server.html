@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Interaktif: Konfigurasi Print Server & Jaringan Dasar</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-900 text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-white">
+
+    <header class="bg-slate-800/80 border-b border-slate-700 backdrop-blur sticky top-0 z-40 px-6 py-4 flex justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-cyan-600 text-white p-2.5 rounded-xl shadow-md flex items-center justify-center">
+                <i class="fa-solid fa-network-wired text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg text-white leading-tight">Uji Kompetensi Jaringan & Print Server</h1>
+                <p class="text-xs text-slate-400">SMK Teknik Komputer & Jaringan • Sesi Daring</p>
+            </div>
+        </div>
+        <div id="security-badge" class="hidden items-center space-x-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-full text-xs font-medium">
+            <i class="fa-solid fa-shield-halved animate-pulse"></i>
+            <span>Mode Keamanan Aktif (<span id="violation-count">0</span>/3 Peringatan)</span>
+        </div>
+    </header>
+
+    <main class="flex-grow flex items-center justify-center p-4 sm:p-6 max-w-4xl mx-auto w-full">
+
+        <!-- 1. START SCREEN (IDENTITAS) -->
+        <section id="start-screen" class="w-full bg-slate-800 border border-slate-700/80 rounded-2xl shadow-2xl p-6 sm:p-10 transform transition-all duration-300">
+            <div class="text-center max-w-lg mx-auto">
+                <div class="inline-flex p-4 bg-cyan-500/10 text-cyan-400 rounded-2xl mb-4 border border-cyan-500/20">
+                    <i class="fa-solid fa-laptop-code text-3xl"></i>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white mb-2">Evaluasi Mandiri Daring</h2>
+                <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                    Silakan masukkan nama dan kelas Anda. Kuis ini dilengkapi dengan <strong class="text-white">sistem pengaman layar (Anti-Cheat / Screen Lock)</strong>. Meninggalkan halaman atau beralih tab browser akan memicu peringatan dan dapat mengunci kuis secara otomatis!
+                </p>
+                
+                <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 text-left mb-6 text-xs text-slate-400 space-y-2">
+                    <div class="font-semibold text-slate-200 mb-1"><i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1.5"></i> Peraturan Ketat:</div>
+                    <div class="flex items-start"><i class="fa-solid fa-check text-cyan-400 mt-0.5 mr-2"></i> Jangan membuka tab lain, aplikasi lain, atau meminimize browser.</div>
+                    <div class="flex items-start"><i class="fa-solid fa-check text-cyan-400 mt-0.5 mr-2"></i> Maksimal 3 kali peringatan sebelum kuis otomatis disubmit paksa.</div>
+                    <div class="flex items-start"><i class="fa-solid fa-check text-cyan-400 mt-0.5 mr-2"></i> Siapkan catatan konsep subnetting & troubleshooting Anda.</div>
+                </div>
+
+                <form id="identity-form" onsubmit="startQuiz(event)" class="space-y-4 text-left">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Nama Lengkap</label>
+                        <input type="text" id="student-name" required placeholder="Contoh: Ahmad Rizki" 
+                            class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Kelas & Jurusan</label>
+                        <input type="text" id="student-class" required placeholder="Contoh: XI TKJ 1" 
+                            class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition text-sm">
+                    </div>
+                    <button type="submit" 
+                        class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-3.5 px-6 rounded-xl transition duration-200 shadow-lg shadow-cyan-600/30 flex items-center justify-center space-x-2 mt-2">
+                        <span>Mulai Kuis & Kunci Layar</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- 2. QUIZ SCREEN -->
+        <section id="quiz-screen" class="w-full bg-slate-800 border border-slate-700/80 rounded-2xl shadow-2xl p-6 sm:p-8 hidden">
+            <!-- Header Progress -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 mb-6 border-b border-slate-700 gap-4">
+                <div>
+                    <span id="question-tracker" class="text-xs font-bold uppercase tracking-wider text-cyan-400 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">Pertanyaan 1 dari 7</span>
+                    <h3 id="question-title" class="text-lg font-bold text-white mt-2">Konfigurasi Jaringan</h3>
+                </div>
+                <div class="flex items-center space-x-2 bg-slate-900 px-4 py-2 rounded-xl border border-slate-700">
+                    <i class="fa-solid fa-clock text-cyan-400"></i>
+                    <span id="timer-display" class="font-mono text-sm font-semibold text-slate-200">15:00</span>
+                </div>
+            </div>
+
+            <!-- Question Box -->
+            <div class="mb-6">
+                <p id="question-text" class="text-base sm:text-lg text-slate-100 font-medium leading-relaxed mb-6"></p>
+                <div id="options-container" class="space-y-3">
+                    <!-- Dynamically injected options -->
+                </div>
+            </div>
+
+            <!-- Navigation Controls -->
+            <div class="flex justify-between items-center pt-4 border-t border-slate-700">
+                <button id="prev-btn" onclick="prevQuestion()" disabled
+                    class="px-5 py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-slate-400 cursor-not-allowed transition flex items-center space-x-2">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Sebelumnya</span>
+                </button>
+                <button id="next-btn" onclick="nextQuestion()" disabled
+                    class="px-6 py-2.5 rounded-xl text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition flex items-center space-x-2 shadow-md shadow-cyan-600/20">
+                    <span>Selanjutnya</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. RESULT SCREEN -->
+        <section id="result-screen" class="w-full bg-slate-800 border border-slate-700/80 rounded-2xl shadow-2xl p-6 sm:p-10 hidden text-center">
+            <div class="max-w-md mx-auto">
+                <div id="result-icon-container" class="w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-3xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-xl">
+                    <i id="result-icon" class="fa-solid fa-award"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-1">Kuis Telah Selesai!</h2>
+                <p id="result-subtitle" class="text-slate-400 text-sm mb-6">Data jawaban Anda telah terekam di sistem.</p>
+
+                <div class="bg-slate-900/80 border border-slate-700 rounded-2xl p-6 mb-6 text-left space-y-3 shadow-inner">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-400">Nama Siswa:</span>
+                        <span id="summary-name" class="font-semibold text-white"></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-400">Kelas:</span>
+                        <span id="summary-class" class="font-semibold text-white"></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-slate-400">Pelanggaran Layar:</span>
+                        <span id="summary-violations" class="font-semibold text-amber-400"></span>
+                    </div>
+                    <div class="border-t border-slate-800 pt-3 flex justify-between items-center">
+                        <span class="text-slate-300 font-medium">Skor Akhir:</span>
+                        <span id="summary-score" class="text-2xl font-black text-cyan-400">0 / 100</span>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <button onclick="triggerScreenshot()" 
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-camera"></i>
+                        <span>Simpan Hasil / Tangkap Layar</span>
+                    </button>
+                    <button onclick="location.reload()" 
+                        class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2.5 px-6 rounded-xl transition text-sm">
+                        Ulangi Kuis
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-4 text-xs text-slate-500 border-t border-slate-800">
+        Simulasi Pembelajaran Daring Jaringan Komputer &bull; Dilindungi Sistem Anti-Cheat Terpadu
+    </footer>
+
+    <!-- WARNING MODAL (SECURITY ALERT) -->
+    <div id="warning-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-amber-500/50 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl">
+            <div class="w-16 h-16 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-4">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2">Peringatan Keamanan!</h3>
+            <p id="warning-message" class="text-slate-300 text-sm mb-6 leading-relaxed">
+                Anda terdeteksi meninggalkan halaman kuis atau beralih tab browser. Tindakan ini dicatat sebagai pelanggaran aturan ujian.
+            </p>
+            <button onclick="dismissWarning()" 
+                class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-amber-600/30">
+                Saya Mengerti & Kembali ke Kuis
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Database Soal Jaringan & Print Server berkualitas SMK
+        const quizData = [
+            {
+                title: "Topik: Pengujian Koneksi (Ping)",
+                question: "Dalam simulasi jaringan, seorang siswa mendapatkan pesan *Request Timed Out* (RTO) saat melakukan ping dari PC klien ke Print Server. Langkah diagnosis awal yang paling tepat adalah...",
+                options: [
+                    "Langsung mengganti perangkat kabel fisik dengan yang baru",
+                    "Memeriksa kesesuaian alamat IP Address, Subnet Mask, dan status kabel logis",
+                    "Memulai ulang komputer secara terus menerus",
+                    "Mengganti sistem operasi pada komputer klien"
+                ],
+                correct: 1
+            },
+            {
+                title: "Topik: Network ID & Subnet Mask",
+                question: "Sebuah komputer memiliki IP Address `192.168.1.15` dengan Subnet Mask `255.255.255.0` ingin terhubung dengan Print Server ber-IP `192.168.2.10`. Mengapa proses komunikasi bisa gagal atau memerlukan router?",
+                options: [
+                    "Karena kapasitas kecepatan transfer data berbeda",
+                    "Karena kedua perangkat berada pada Network ID yang berbeda",
+                    "Karena jenis kabel yang digunakan tidak sesuai",
+                    "Karena printer dalam kondisi mati"
+                ],
+                correct: 1
+            },
+            {
+                title: "Topik: Fungsi Default Gateway",
+                question: "Apa fungsi utama dari konfigurasi *Default Gateway* pada pengaturan IP di sebuah PC agar dapat terhubung dengan perangkat cetak di segmen jaringan yang berbeda?",
+                options: [
+                    "Sebagai penyedia tegangan listrik bagi jaringan",
+                    "Menjadi jalur perantara keluar masuk paket data antar segmen network yang berbeda",
+                    "Mempercepat koneksi internet secara otomatis",
+                    "Mengubah alamat IP menjadi nama domain"
+                ],
+                correct: 1
+            },
+            {
+                title: "Topik: Perhitungan Subnetting",
+                question: "Jika sebuah komputer memiliki IP Address `10.10.10.25` dengan Subnet Mask `255.255.255.192`, berapakah rentang IP host yang valid dan dapat digunakan pada subnet tersebut?",
+                options: [
+                    "`10.10.10.1` sampai `10.10.10.62`",
+                    "`10.10.10.65` sampai `10.10.10.126`",
+                    "`10.10.10.1` sampai `10.10.10.254`",
+                    "`10.10.10.0` sampai `10.10.10.255`"
+                ],
+                correct: 0
+            },
+            {
+                title: "Topik: Persyaratan Print Server",
+                question: "Manakah komponen konfigurasi dasar yang **wajib** diisi secara benar agar sebuah Print Server berbasis jaringan dapat dikenali dan diakses oleh PC klien?",
+                options: [
+                    "Alamat IP Statis dan Subnet Mask yang konsisten",
+                    "Wallpaper latar belakang server",
+                    "Resolusi layar monitor server",
+                    "Nama pabrik pembuat kabel LAN"
+                ],
+                correct: 0
+            },
+            {
+                title: "Topik: Analisis Pesan Error",
+                question: "Siswa A melakukan tes koneksi menggunakan perintah `ping 192.168.1.100`, namun muncul keterangan *Destination Host Unreachable*. Apa arti indikasi tersebut?",
+                options: [
+                    "Kabel terputus secara total di dalam tembok",
+                    "Komputer pengirim tidak memiliki jalur atau rute menuju network tujuan",
+                    "Komputer tujuan menolak koneksi karena kepenuhan memori",
+                    "Printer kehabisan tinta hitam"
+                ],
+                correct: 1
+            },
+            {
+                title: "Topik: Troubleshooting Hardware & Software",
+                question: "Skenario Kasus: Pengujian cetak dokumen dari PC ke Print Server berhasil mengirimkan data, namun printer fisik tidak merespons atau mencetak apa pun. Analisis masalah logis yang paling tepat adalah...",
+                options: [
+                    "IP Address salah konfigurasi",
+                    "Driver printer tidak sesuai, antrean cetak mengalami pause, atau kabel USB printer ke print server bermasalah",
+                    "Subnet Mask kurang satu digit",
+                    "Komputer klien terkena virus malware"
+                ],
+                correct: 1
+            }
+        ];
+
+        // Utilitas Teks: escape HTML lalu render markdown sederhana
+        // (bold **, italic *, dan kode `backtick`) supaya penanda markdown
+        // tidak tampil literal di layar.
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[ch]);
+        }
+
+        function formatInline(str) {
+            return escapeHtml(str)
+                .replace(/`([^`]+)`/g, '<code class="font-mono text-[0.9em] bg-slate-950/80 px-1.5 py-0.5 rounded text-cyan-300">$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-white font-bold">$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em class="italic text-slate-300">$1</em>');
+        }
+
+        // State Aplikasi
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(quizData.length).fill(null);
+        let studentInfo = { name: "", classRoom: "" };
+        let violationCount = 0;
+        const maxViolations = 3;
+        const VIOLATION_COOLDOWN = 1500; // ms, cegah satu peristiwa terhitung >1x
+        let quizActive = false;
+        let quizFinished = false;
+        let timerInterval;
+        let timeLeft = 900; // 15 menit
+        let quizDeadline = null;
+        let lastViolationAt = 0;
+
+        // Inisialisasi Mulai Kuis
+        function startQuiz(e) {
+            e.preventDefault();
+            const nameInput = document.getElementById('student-name').value.trim();
+            const classInput = document.getElementById('student-class').value.trim();
+
+            if (!nameInput || !classInput) return;
+
+            studentInfo.name = nameInput;
+            studentInfo.classRoom = classInput;
+
+            // Masuk Fullscreen jika didukung browser
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(err => console.log(err));
+                }
+            } catch (err) {
+                console.log("Fullscreen not allowed automatically");
+            }
+
+            // Sembunyikan form, tampilkan kuis & badge keamanan
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('security-badge').classList.remove('hidden');
+            document.getElementById('security-badge').classList.add('flex');
+
+            quizActive = true;
+            loadQuestion();
+            startTimer();
+            initAntiCheat();
+        }
+
+        // Timer Kuis
+        function startTimer() {
+            quizDeadline = Date.now() + timeLeft * 1000;
+            renderTimer();
+            timerInterval = setInterval(() => {
+                // Dihitung dari deadline absolut agar tidak terkena drift setInterval
+                // maupun throttling browser saat tab tidak aktif.
+                timeLeft = Math.max(0, Math.round((quizDeadline - Date.now()) / 1000));
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    renderTimer();
+                    finishQuiz();
+                    return;
+                }
+                renderTimer();
+            }, 250);
+        }
+
+        function renderTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer-display').textContent =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Muat Pertanyaan ke UI
+        function loadQuestion() {
+            const q = quizData[currentQuestionIndex];
+            document.getElementById('question-tracker').textContent = `Pertanyaan ${currentQuestionIndex + 1} dari ${quizData.length}`;
+            document.getElementById('question-title').textContent = q.title;
+            document.getElementById('question-text').innerHTML = formatInline(q.question);
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                const isSelected = userAnswers[currentQuestionIndex] === idx;
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `w-full text-left p-4 rounded-xl border transition flex items-start space-x-3 text-sm font-medium ${
+                    isSelected 
+                        ? 'bg-cyan-600/20 border-cyan-500 text-white shadow-md' 
+                        : 'bg-slate-900/60 border-slate-700 hover:border-slate-600 text-slate-200'
+                }`;
+                button.innerHTML = `
+                    <span class="flex-shrink-0 w-6 h-6 rounded-full border ${isSelected ? 'border-cyan-400 bg-cyan-500 text-white' : 'border-slate-600 text-slate-400'} flex items-center justify-center text-xs font-bold mt-0.5">${String.fromCharCode(65 + idx)}</span>
+                    <span class="flex-grow leading-relaxed">${formatInline(opt)}</span>
+                `;
+                button.onclick = () => selectOption(idx);
+                optionsContainer.appendChild(button);
+            });
+
+            // Update Navigasi Buttons
+            document.getElementById('prev-btn').disabled = currentQuestionIndex === 0;
+            if (currentQuestionIndex === 0) {
+                document.getElementById('prev-btn').className = "px-5 py-2.5 rounded-xl text-sm font-medium bg-slate-700/50 text-slate-500 cursor-not-allowed transition flex items-center space-x-2";
+            } else {
+                document.getElementById('prev-btn').className = "px-5 py-2.5 rounded-xl text-sm font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 transition flex items-center space-x-2";
+            }
+
+            const nextBtn = document.getElementById('next-btn');
+            if (currentQuestionIndex === quizData.length - 1) {
+                nextBtn.innerHTML = `<span>Selesaikan Kuis</span> <i class="fa-solid fa-flag-checkered"></i>`;
+            } else {
+                nextBtn.innerHTML = `<span>Selanjutnya</span> <i class="fa-solid fa-arrow-right"></i>`;
+            }
+
+            // Validasi tombol next aktif jika sudah dijawab
+            nextBtn.disabled = userAnswers[currentQuestionIndex] === null;
+            if (userAnswers[currentQuestionIndex] === null) {
+                nextBtn.className = "px-6 py-2.5 rounded-xl text-sm font-semibold bg-slate-700 text-slate-500 cursor-not-allowed transition flex items-center space-x-2";
+            } else {
+                nextBtn.className = "px-6 py-2.5 rounded-xl text-sm font-semibold bg-cyan-600 hover:bg-cyan-500 text-white transition flex items-center space-x-2 shadow-md shadow-cyan-600/20";
+            }
+        }
+
+        // Pilih Jawaban
+        function selectOption(index) {
+            userAnswers[currentQuestionIndex] = index;
+            loadQuestion();
+        }
+
+        // Navigasi Next
+        function nextQuestion() {
+            if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        // Navigasi Prev
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+            }
+        }
+
+        // Selesaikan Kuis & Hitung Skor
+        function finishQuiz() {
+            if (quizFinished) return;
+            quizFinished = true;
+            quizActive = false;
+            clearInterval(timerInterval);
+
+            // Tutup modal peringatan agar tidak menutupi layar hasil
+            document.getElementById('warning-modal').classList.add('hidden');
+
+            // Hitung Skor
+            let correctCount = 0;
+            userAnswers.forEach((ans, idx) => {
+                if (ans === quizData[idx].correct) correctCount++;
+            });
+            const score = Math.round((correctCount / quizData.length) * 100);
+
+            // Tampilkan Ringkasan
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('security-badge').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            document.getElementById('summary-name').textContent = studentInfo.name;
+            document.getElementById('summary-class').textContent = studentInfo.classRoom;
+            document.getElementById('summary-violations').textContent = `${violationCount} Kali`;
+            document.getElementById('summary-score').textContent = `${score} / 100`;
+
+            if (score >= 75) {
+                document.getElementById('result-icon-container').className = "w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-3xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-xl";
+                document.getElementById('result-icon').className = "fa-solid fa-award";
+                document.getElementById('result-subtitle').textContent = "Luar biasa! Pemahaman konsep jaringan & print server Anda sangat baik.";
+            } else {
+                document.getElementById('result-icon-container').className = "w-20 h-20 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-3xl mx-auto flex items-center justify-center text-3xl mb-4 shadow-xl";
+                document.getElementById('result-icon').className = "fa-solid fa-book-open-reader";
+                document.getElementById('result-subtitle').textContent = "Tuntas, namun perlu memperkuat analisis subnetting & troubleshooting.";
+            }
+
+            // Keluar fullscreen otomatis
+            try {
+                if (document.exitFullscreen) document.exitFullscreen().catch(err => {});
+            } catch (e) {}
+        }
+
+        // Sistem Pengaman Anti-Cheat (Screen Lock & Visibility Change)
+        function initAntiCheat() {
+            // Satu perpindahan tab memicu event visibilitychange DAN window.blur sekaligus.
+            // Keduanya digabung ke satu trigger, lalu di-debounce agar 1 pelanggaran
+            // tidak terhitung dua kali.
+            const trigger = () => {
+                if (!quizActive) return;
+                // Saat tab masih terlihat, abaikan blur biasa (klik address bar, devtools, dialog OS).
+                if (document.visibilityState === 'visible') return;
+                const now = Date.now();
+                if (now - lastViolationAt < VIOLATION_COOLDOWN) return;
+                lastViolationAt = now;
+                handleViolation();
+            };
+
+            document.addEventListener('visibilitychange', trigger);
+            window.addEventListener('blur', trigger);
+        }
+
+        function handleViolation() {
+            violationCount++;
+            document.getElementById('violation-count').textContent = violationCount;
+
+            if (violationCount >= maxViolations) {
+                alert("Anda telah melanggar aturan pengaman layar sebanyak 3 kali. Kuis akan disubmit otomatis sekarang!");
+                finishQuiz();
+            } else {
+                const modal = document.getElementById('warning-modal');
+                const msg = document.getElementById('warning-message');
+                msg.innerHTML = `Anda terdeteksi meninggalkan halaman kuis. Pelanggaran ke-<b>${violationCount}</b> dari ${maxViolations}. Jika mencapai batas maksimal, kuis otomatis terkunci dan tersubmit.`;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function dismissWarning() {
+            document.getElementById('warning-modal').classList.add('hidden');
+        }
+
+        function triggerScreenshot() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
